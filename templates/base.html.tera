@@ -1,0 +1,18 @@
+<!doctype html>
+
+<html lang="{{ lang }}">
+<head>
+  <meta charset="{{ charset }}">
+
+  <title>{{ name }}</title>
+  <meta name="description" content="{{ description }}>
+  <meta name="author" content="{{ author }}">
+
+  <link rel="stylesheet" href="css/picnic.min.css">
+
+</head>
+
+<body>
+  <script src="js/umbrella.min.js"></script>
+</body>
+</html>
