@@ -2,10 +2,12 @@
 extern crate lazy_static;
 
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, BufReader};
 
 use actix_web::{middleware, web, App, Error, HttpResponse, HttpServer};
 use async_std::task;
+use rustls::{NoClientAuth, ServerConfig};
+use rustls::internal::pemfile::{certs, rsa_private_keys};
 use serde::{Deserialize, Serialize};
 use tera::Tera;
 
@@ -63,6 +65,7 @@ pub enum Context {
     Content(Option<ContentConf>),
     App(Option<AppConf>),
     Server(Option<ServerConf>),
+    Ssl(Option<SslConf>),
 }
 
 // Struct for content context. If you change this, remember:
@@ -75,6 +78,8 @@ pub struct ContentConf {
     description: String,
     charset: String,
     lang: String,
+    css: String,
+    js: String,
 }
 
 // Struct for app configs. If you change this, remember:
@@ -92,6 +97,15 @@ pub struct AppConf {
 pub struct ServerConf {
     socket: String,
     hostname: String,
+}
+
+// Struct for app configs. If you change this, remember:
+//   - To update app.json
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SslConf {
+    certfile: String,
+    keyfile: String,
+    socket: String,
 }
 
 // Load a context from JSON
@@ -116,7 +130,7 @@ async fn load_json_ctx(json_ctx: Context, path: &str) -> Context {
     // Load the context to the correct struct. Enums. Enums!!!
     match json_ctx {
         Context::Content(_) => {
-            let ctx: ContentConf = match serde_json::from_str(&data) {
+            let content_ctx: ContentConf = match serde_json::from_str(&data) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("Serde deserialization error(s): {}", e);
@@ -124,12 +138,12 @@ async fn load_json_ctx(json_ctx: Context, path: &str) -> Context {
                     ::std::process::exit(1);
                 }
             };
-            println!("{:#?}", Context::Content(Some(ctx.clone()))); //Eventually remove or rework w/o clone; just for testing
-            Context::Content(Some(ctx))
-        }
+            println!("{:#?}", Context::Content(Some(content_ctx.clone()))); //Eventually remove or rework w/o clone; just for testing
+            Context::Content(Some(content_ctx))
+        },
 
         Context::App(_) => {
-            let ctx: AppConf = match serde_json::from_str(&data) {
+            let app_ctx: AppConf = match serde_json::from_str(&data) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("Serde deserialization error(s): {}", e); //Eventually remove or rework w/o clone; just for testing
@@ -137,12 +151,12 @@ async fn load_json_ctx(json_ctx: Context, path: &str) -> Context {
                     ::std::process::exit(1);
                 }
             };
-            println!("{:#?}", Context::App(Some(ctx.clone())));
-            Context::App(Some(ctx))
-        }
+            println!("{:#?}", Context::App(Some(app_ctx.clone())));
+            Context::App(Some(app_ctx))
+        },
 
         Context::Server(_) => {
-            let ctx: ServerConf = match serde_json::from_str(&data) {
+            let server_ctx: ServerConf = match serde_json::from_str(&data) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("Serde deserialization error(s): {}", e); //Eventually remove or rework w/o clone; just for testing
@@ -150,8 +164,21 @@ async fn load_json_ctx(json_ctx: Context, path: &str) -> Context {
                     ::std::process::exit(1);
                 }
             };
-            println!("{:#?}", Context::Server(Some(ctx.clone())));
-            Context::Server(Some(ctx))
+            println!("{:#?}", Context::Server(Some(server_ctx.clone())));
+            Context::Server(Some(server_ctx))
+        },
+
+        Context::Ssl(_) => {
+            let ssl_ctx: SslConf = match serde_json::from_str(&data) {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("Serde deserialization error(s): {}", e); //Eventually remove or rework w/o clone; just for testing
+                    println!("{}", &data);
+                    ::std::process::exit(1);
+                }
+            };
+            println!("{:#?}", Context::Ssl(Some(ssl_ctx.clone())));
+            Context::Ssl(Some(ssl_ctx))
         }
     }
 }
@@ -171,7 +198,7 @@ async fn index(tmpl: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
             ::std::process::exit(1);
         }
     };
-    let s = tmpl.render("base.html.tera", &ctx).unwrap();
+    let s = tmpl.render("index.html.tera", &ctx).unwrap();
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(s))
@@ -221,10 +248,35 @@ async fn server_conf(path: &str) -> ServerConf {
     }
 }
 
+// Load SSL configurations
+async fn ssl_conf(path: &str) -> SslConf {
+    match load_json_ctx(Context::Ssl(None), path).await {
+        Context::Ssl(Some(t)) => t,
+        Context::Ssl(None) => {
+            println!("Error: recieved blank context for server.");
+            ::std::process::exit(1);
+        }
+        _ => {
+            println!("Error: recieved incorrect context type.");
+            ::std::process::exit(1);
+        }
+    }
+}
 // Le main
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     let svr = server_conf("/json/server.json").await;
+    let ssl = ssl_conf("/json/ssl.json").await;
+    let cert_path = env!("CARGO_MANIFEST_DIR").to_owned() + &ssl.certfile;
+    let key_path = env!("CARGO_MANIFEST_DIR").to_owned() + &ssl.keyfile;
+
+    let mut config = ServerConfig::new(NoClientAuth::new());
+    let cert_file = &mut BufReader::new(File::open(cert_path).unwrap());
+    let key_file = &mut BufReader::new(File::open(key_path).unwrap());
+    let cert_chain = certs(cert_file).unwrap();
+    let mut keys = rsa_private_keys(key_file).unwrap();
+    config.set_single_cert(cert_chain, keys.remove(0)).unwrap();
+
     HttpServer::new(|| {
         let app = task::block_on(app_conf("/json/app.json"));
         let tera_templates = env!("CARGO_MANIFEST_DIR").to_owned() + &app.templates;
@@ -243,8 +295,9 @@ async fn main() -> std::io::Result<()> {
             .route(&app.css, web::get().to(css))
             .route(&app.javascript, web::get().to(js))
     })
-    .server_hostname(&svr.hostname)
     .bind(&svr.socket)?
+    .bind_rustls(&ssl.socket, config)?
+    .server_hostname(&svr.hostname)
     .run()
     .await
 }

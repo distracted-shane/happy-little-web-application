@@ -4,15 +4,16 @@
 <head>
   <meta charset="{{ charset }}">
 
-  <title>{{ name }}</title>
+  <title>{% block title %}{{ name }}{% endblock title %}</title>
   <meta name="description" content="{{ description }}">
   <meta name="author" content="{{ author }}">
-
-  <link rel="stylesheet" href="css/picnic.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ css }}">
 
 </head>
 
 <body>
-  <script src="js/umbrella.min.js"></script>
+{% block body %}{% endblock body %}
+  <script src="{{ js }}"></script>
 </body>
 </html>

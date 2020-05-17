@@ -1,0 +1,6 @@
+{
+    "certfile": "/ssl/cert.pem",
+    "keyfile": "/ssl/key.pem",
+    "socket": "127.0.0.1:8443"
+
+}
