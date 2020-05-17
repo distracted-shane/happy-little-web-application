@@ -4,14 +4,14 @@ extern crate lazy_static;
 use std::fs::File;
 use std::io::Read;
 
-use actix_web::{web, App, Error, HttpResponse, HttpServer};
+use actix_web::{middleware, web, App, Error, HttpResponse, HttpServer};
 use async_std::task;
 use serde::{Deserialize, Serialize};
 use tera::Tera;
 
 lazy_static! {
     // The CSS framework won't change often and it is so smol.
-    // So we'll just lazy-load it statically.
+    // So we'll just lazy-load it statically. [Eventually we'll want to procompress this shiz]
     pub static ref CSS: String = {
 
         // Open file or err
@@ -30,11 +30,11 @@ lazy_static! {
                 println!("CSS file read error(s).");
                 ::std::process::exit(1);
         }
-    data
+        data
     };
 
 // The JS framework won't be changing often and it is smol, so smol.
-// So we'll just lazy-load it statically.
+// So we'll just lazy-load it statically. [Eventually we'll want to procompress this shiz]
     pub static ref JS: String = {
 
         // Open file or err
@@ -177,14 +177,14 @@ async fn index(tmpl: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
         .body(s))
 }
 
-// Send CSS.
+// Send CSS. [Eventually we'll want to procompress this shiz]
 async fn css() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
         .content_type("text/css; charset=utf-8")
         .body(&*CSS))
 }
 
-// Send JS.
+// Send JS. [Eventually we'll want to procompress this shiz]
 async fn js() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
         .content_type("text/javascript; charset=utf-8")
@@ -237,6 +237,7 @@ async fn main() -> std::io::Result<()> {
         };
 
         App::new()
+            .wrap(middleware::Compress::default())
             .data(tera)
             .service(web::resource("/").route(web::get().to(index)))
             .route(&app.css, web::get().to(css))
