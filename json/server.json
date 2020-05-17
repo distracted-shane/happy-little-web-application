@@ -1,6 +1,4 @@
 {
     "socket": "127.0.0.1:8080",
-    "templates": "/templates/**/*",
-    "css": "/css/picnic.min.css",
-    "javascript": "/js/umbrella.min.js"
+    "hostname": "localhost"
 }

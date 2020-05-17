@@ -9,9 +9,9 @@ use async_std::task;
 use serde::{Deserialize, Serialize};
 use tera::Tera;
 
-// The CSS framework won't change often and it is so smol.
-// So we'll just lazy-load it statically.
 lazy_static! {
+    // The CSS framework won't change often and it is so smol.
+    // So we'll just lazy-load it statically.
     pub static ref CSS: String = {
 
         // Open file or err
@@ -32,11 +32,9 @@ lazy_static! {
         }
     data
     };
-}
 
 // The JS framework won't be changing often and it is smol, so smol.
 // So we'll just lazy-load it statically.
-lazy_static! {
     pub static ref JS: String = {
 
         // Open file or err
@@ -59,17 +57,18 @@ lazy_static! {
     };
 }
 
-// Enum of contexts we can grab from JSON
+// Enum of contexts or configs we can grab from JSON
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Context {
-    WWW(Option<SiteGlobal>),
-    Server(Option<ServerGlobal>),
+    Content(Option<ContentConf>),
+    App(Option<AppConf>),
+    Server(Option<ServerConf>),
 }
 
-// Struct for global site context. If you change this, remember:
-//   - To update site.json
+// Struct for content context. If you change this, remember:
+//   - To update content.json
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SiteGlobal {
+pub struct ContentConf {
     name: String,
     url: String,
     author: String,
@@ -78,17 +77,24 @@ pub struct SiteGlobal {
     lang: String,
 }
 
-// Struct for global serve context. If you change this, remember:
-//   - To update server.json
+// Struct for app configs. If you change this, remember:
+//   - To update app.json
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ServerGlobal {
-    socket: String,
+pub struct AppConf {
     templates: String,
     css: String,
     javascript: String,
 }
 
-// Load a context
+// Struct for app configs. If you change this, remember:
+//   - To update app.json
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ServerConf {
+    socket: String,
+    hostname: String,
+}
+
+// Load a context from JSON
 async fn load_json_ctx(json_ctx: Context, path: &str) -> Context {
     // Open file or err
     let full_path = env!("CARGO_MANIFEST_DIR").to_owned() + path;
@@ -109,23 +115,38 @@ async fn load_json_ctx(json_ctx: Context, path: &str) -> Context {
 
     // Load the context to the correct struct. Enums. Enums!!!
     match json_ctx {
-        Context::WWW(_) => {
-            let ctx: SiteGlobal = match serde_json::from_str(&data) {
+        Context::Content(_) => {
+            let ctx: ContentConf = match serde_json::from_str(&data) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("Serde deserialization error(s): {}", e);
+                    println!("{}", &data);
                     ::std::process::exit(1);
                 }
             };
-            println!("{:#?}", Context::WWW(Some(ctx.clone()))); //Eventually remove or rework w/o clone; just for testing
-            Context::WWW(Some(ctx))
+            println!("{:#?}", Context::Content(Some(ctx.clone()))); //Eventually remove or rework w/o clone; just for testing
+            Context::Content(Some(ctx))
         }
 
-        Context::Server(_) => {
-            let ctx: ServerGlobal = match serde_json::from_str(&data) {
+        Context::App(_) => {
+            let ctx: AppConf = match serde_json::from_str(&data) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("Serde deserialization error(s): {}", e); //Eventually remove or rework w/o clone; just for testing
+                    println!("{}", &data);
+                    ::std::process::exit(1);
+                }
+            };
+            println!("{:#?}", Context::App(Some(ctx.clone())));
+            Context::App(Some(ctx))
+        }
+
+        Context::Server(_) => {
+            let ctx: ServerConf = match serde_json::from_str(&data) {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("Serde deserialization error(s): {}", e); //Eventually remove or rework w/o clone; just for testing
+                    println!("{}", &data);
                     ::std::process::exit(1);
                 }
             };
@@ -135,17 +156,18 @@ async fn load_json_ctx(json_ctx: Context, path: &str) -> Context {
     }
 }
 
+// General templating route.
 async fn index(tmpl: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
     // Load context for Tera. Make sure it worked-- that it isn't empty or some
     // other kind of context.
-    let ctx = match load_json_ctx(Context::WWW(None), "/json/site.json").await {
-        Context::WWW(Some(t)) => tera::Context::from_serialize(t).unwrap(),
-        Context::WWW(None) => {
-            println!("Something's very wrong. Recieved blank context for site.");
+    let ctx = match load_json_ctx(Context::Content(None), "/json/content.json").await {
+        Context::Content(Some(t)) => tera::Context::from_serialize(t).unwrap(),
+        Context::Content(None) => {
+            println!("Error: recieved blank context for content.");
             ::std::process::exit(1);
         }
-        Context::Server(_) => {
-            println!("Something's very wrong. Recieved server context for site.");
+        _ => {
+            println!("Error: recieved incorrect context type.");
             ::std::process::exit(1);
         }
     };
@@ -155,40 +177,57 @@ async fn index(tmpl: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
         .body(s))
 }
 
+// Send CSS.
 async fn css() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
         .content_type("text/css; charset=utf-8")
         .body(&*CSS))
 }
 
+// Send JS.
 async fn js() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
         .content_type("text/javascript; charset=utf-8")
         .body(&*JS))
 }
 
-fn server_conf(path: &str) -> ServerGlobal {
-    let result = async {
-        match load_json_ctx(Context::Server(None), path).await {
-            Context::Server(Some(t)) => t,
-            Context::Server(None) => {
-                println!("Something's very wrong. Recieved blank context for server.");
-                ::std::process::exit(1);
-            }
-            Context::WWW(_) => {
-                println!("Something's very wrong. Recieved site context for server.");
-                ::std::process::exit(1);
-            }
+// Load application-specific configurations
+async fn app_conf(path: &str) -> AppConf {
+    match load_json_ctx(Context::App(None), path).await {
+        Context::App(Some(t)) => t,
+        Context::App(None) => {
+            println!("Error: recieved blank context for application.");
+            ::std::process::exit(1);
         }
-    };
-    task::block_on(result)
+        _ => {
+            println!("Error: recieved incorrect context type.");
+            ::std::process::exit(1);
+        }
+    }
 }
 
+// Load server configurations
+async fn server_conf(path: &str) -> ServerConf {
+    match load_json_ctx(Context::Server(None), path).await {
+        Context::Server(Some(t)) => t,
+        Context::Server(None) => {
+            println!("Error: recieved blank context for server.");
+            ::std::process::exit(1);
+        }
+        _ => {
+            println!("Error: recieved incorrect context type.");
+            ::std::process::exit(1);
+        }
+    }
+}
+
+// Le main
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
+    let svr = server_conf("/json/server.json").await;
     HttpServer::new(|| {
-        let svr_conf = server_conf("/json/server.json");
-        let tera_templates = env!("CARGO_MANIFEST_DIR").to_owned() + &svr_conf.templates;
+        let app = task::block_on(app_conf("/json/app.json"));
+        let tera_templates = env!("CARGO_MANIFEST_DIR").to_owned() + &app.templates;
         let tera = match Tera::new(&tera_templates) {
             Ok(t) => t,
             Err(e) => {
@@ -200,10 +239,11 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .data(tera)
             .service(web::resource("/").route(web::get().to(index)))
-            .route(&svr_conf.css, web::get().to(css))
-            .route(&svr_conf.javascript, web::get().to(js))
+            .route(&app.css, web::get().to(css))
+            .route(&app.javascript, web::get().to(js))
     })
-    .bind("127.0.0.1:8080")?
+    .server_hostname(&svr.hostname)
+    .bind(&svr.socket)?
     .run()
     .await
 }
