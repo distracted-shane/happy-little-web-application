@@ -70,20 +70,32 @@ pub async fn index(tmpl: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
     };
     let s = tmpl.render("index.html.tera", &ctx).unwrap();
     Ok(HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
+        .header("Content-Type", "text/html; charset=utf-8")
+        .header("Referrer-Policy", "same-origin")
+        .header("X-Content-Type-Options", "nosniff")
+        .header("X-Frame-Options", "SAMEORIGIN")
+        .header("X-XSS-Protection", "1; mode=block")
         .body(s))
 }
 
 // Send CSS. [Eventually we'll want to procompress this shiz]
 pub async fn css() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
-        .content_type("text/css; charset=utf-8")
+        .header("Content-Type", "text/css; charset=utf-8")
+        .header("Referrer-Policy", "same-origin")
+        .header("X-Content-Type-Options", "nosniff")
+        .header("X-Frame-Options", "SAMEORIGIN")
+        .header("X-XSS-Protection", "1; mode=block")
         .body(&*CSS))
 }
 
 // Send JS. [Eventually we'll want to procompress this shiz]
 pub async fn js() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
-        .content_type("text/javascript; charset=utf-8")
+        .header("Content-Type", "text/javascript; charset=utf-8")
+        .header("Referrer-Policy", "same-origin")
+        .header("X-Content-Type-Options", "nosniff")
+        .header("X-Frame-Options", "SAMEORIGIN")
+        .header("X-XSS-Protection", "1; mode=block")
         .body(&*JS))
 }

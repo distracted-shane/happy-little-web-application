@@ -8,12 +8,13 @@
   <meta name="description" content="{{ description }}">
   <meta name="author" content="{{ author }}">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="preload" rel="stylesheet" href="{{ css }}">
-  <script async src="{{ js }}"></script>
+  <link rel="preload" href="{{ css }}" as="style">
+  <link rel="preload" href="{{ js }}" as="script">
+  <link rel="stylesheet" href="{{ css }}">
 </head>
 
 <body>
 {% block body %}{% endblock body %}
-
+<script src="{{ js }}" defer></script>
 </body>
 </html>
