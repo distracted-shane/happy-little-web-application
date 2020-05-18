@@ -22,6 +22,7 @@ pub struct ContentConf {
     charset: String,
     lang: String,
     css: String,
+    custom_css: String,
     js: String,
 }
 
@@ -31,6 +32,7 @@ pub struct ContentConf {
 pub struct AppConf {
     pub templates: String,
     pub css: String,
+    pub custom_css: String,
     pub javascript: String,
 }
 

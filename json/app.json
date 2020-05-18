@@ -1,5 +1,6 @@
 {
     "templates": "/templates/**/*",
     "css": "/css/picnic.min.css",
+    "custom_css": "/css/custom.css",
     "javascript": "/js/umbrella.min.js"
 }

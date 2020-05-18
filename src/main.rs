@@ -89,7 +89,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Compress::default())
             .data(tera)
             .service(web::resource("/").route(web::get().to(routes::index)))
+            .route("/linux/{article}", web::get().to(routes::linux))
+            .route("/cisco/{article}", web::get().to(routes::cisco))
             .route(&app.css, web::get().to(routes::css))
+            .route(&app.custom_css, web::get().to(routes::custom_css))
             .route(&app.javascript, web::get().to(routes::js))
     })
     .bind(&svr.socket)?

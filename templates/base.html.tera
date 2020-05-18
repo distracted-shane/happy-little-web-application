@@ -9,11 +9,27 @@
   <meta name="author" content="{{ author }}">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preload" href="{{ css }}" as="style">
+  <link rel="preload" href="{{ custom_css }}" as="style">
   <link rel="preload" href="{{ js }}" as="script">
   <link rel="stylesheet" href="{{ css }}">
+  <link rel="stylesheet" href="{{ custom_css }}">
 </head>
 
 <body>
+<nav class="">
+    <a class="brand" href="/">
+    <span>{% block topic %}tachyon.cx{% endblock topic %}</span>
+    </a>
+
+  <!-- responsive-->
+  <input id="bmenub" type="checkbox" class="show">
+  <label for="bmenub" class="burger pseudo button">menu</label>
+
+  <div class="menu">
+    <a href="/cisco/index" class="button pseudo">Cisco</a>
+    <a href="/linux/index" class="button pseudo">Linux</a>
+  </div>
+</nav>
 {% block body %}{% endblock body %}
 <script src="{{ js }}" defer></script>
 </body>

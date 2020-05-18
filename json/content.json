@@ -5,7 +5,8 @@
     "description": "IT learning resources",
     "charset": "UTF-8",
     "lang": "en",
-    "css": "css/picnic.min.css",
-    "js": "js/umbrella.min.js",
+    "css": "/css/picnic.min.css",
+    "custom_css": "/css/custom.css",
+    "js": "/js/umbrella.min.js",
     "_comment": "If you change my structure, remember to update the SiteGlobal struct"
 }
