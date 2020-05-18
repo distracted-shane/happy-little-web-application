@@ -1,5 +1,5 @@
-use std::fs::File;
 use serde::{Deserialize, Serialize};
+use std::fs::File;
 use std::io::Read;
 
 // Enum of contexts or configs we can grab from JSON
@@ -83,7 +83,7 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
             };
             println!("{:#?}", Context::Content(Some(content_ctx.clone()))); //Eventually remove or rework w/o clone; just for testing
             Context::Content(Some(content_ctx))
-        },
+        }
 
         Context::App(_) => {
             let app_ctx: AppConf = match serde_json::from_str(&data) {
@@ -96,7 +96,7 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
             };
             println!("{:#?}", Context::App(Some(app_ctx.clone())));
             Context::App(Some(app_ctx))
-        },
+        }
 
         Context::Server(_) => {
             let server_ctx: ServerConf = match serde_json::from_str(&data) {
@@ -109,7 +109,7 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
             };
             println!("{:#?}", Context::Server(Some(server_ctx.clone())));
             Context::Server(Some(server_ctx))
-        },
+        }
 
         Context::Ssl(_) => {
             let ssl_ctx: SslConf = match serde_json::from_str(&data) {

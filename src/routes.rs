@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 
-use actix_web::{Error, HttpResponse, web};
+use actix_web::{web, Error, HttpResponse};
 
 use super::json::{self, Context};
 
@@ -9,7 +9,7 @@ lazy_static! {
     // The CSS framework won't change often and it is so smol.
     // So we'll just lazy-load it statically. [Eventually we'll want to procompress this shiz]
     pub static ref CSS: String = {
-        
+
         // Open file or err
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/css/picnic.min.css");
         let mut f = match File::open(path) {

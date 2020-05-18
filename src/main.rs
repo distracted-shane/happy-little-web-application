@@ -6,12 +6,12 @@ use std::io::BufReader;
 
 use actix_web::{middleware, web, App, HttpServer};
 use async_std::task;
-use rustls::{NoClientAuth, ServerConfig};
 use rustls::internal::pemfile::{certs, rsa_private_keys};
+use rustls::{NoClientAuth, ServerConfig};
 use tera::Tera;
 
 mod json;
-use  json::{Context, AppConf, ServerConf, SslConf};
+use json::{AppConf, Context, ServerConf, SslConf};
 
 mod routes;
 
