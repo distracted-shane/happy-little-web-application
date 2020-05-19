@@ -1,15 +1,10 @@
 #[macro_use]
 extern crate lazy_static;
 
-use std::fs::File;
-use std::io::BufReader;
-
 use actix_web::{middleware, web, App, HttpServer};
 use async_std::task;
-use rustls::internal::pemfile::{certs, rsa_private_keys};
-use rustls::{NoClientAuth, ServerConfig};
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use tera::Tera;
-
 mod json;
 use json::{AppConf, Context, ServerConf, SslConf};
 
@@ -67,12 +62,12 @@ async fn main() -> std::io::Result<()> {
     let cert_path = env!("CARGO_MANIFEST_DIR").to_owned() + &ssl.certfile;
     let key_path = env!("CARGO_MANIFEST_DIR").to_owned() + &ssl.keyfile;
 
-    let mut config = ServerConfig::new(NoClientAuth::new());
-    let cert_file = &mut BufReader::new(File::open(cert_path).unwrap());
-    let key_file = &mut BufReader::new(File::open(key_path).unwrap());
-    let cert_chain = certs(cert_file).unwrap();
-    let mut keys = rsa_private_keys(key_file).unwrap();
-    config.set_single_cert(cert_chain, keys.remove(0)).unwrap();
+    let mut builder = SslAcceptor::mozilla_modern_v5(SslMethod::tls()).unwrap();
+    builder
+        .set_private_key_file(key_path, SslFiletype::PEM)
+        .unwrap();
+    builder.set_certificate_chain_file(cert_path).unwrap();
+
 
     HttpServer::new(|| {
         let app = task::block_on(app_conf("/json/app.json"));
@@ -87,16 +82,21 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(middleware::Compress::default())
+            .wrap(middleware::DefaultHeaders::new()        
+                .header("Referrer-Policy", "same-origin")
+                .header("X-Content-Type-Options", "nosniff")
+                .header("X-Frame-Options", "SAMEORIGIN")
+                .header("X-XSS-Protection", "1; mode=block"))
             .data(tera)
             .service(web::resource("/").route(web::get().to(routes::index)))
-            .route("/linux/{article}", web::get().to(routes::linux))
-            .route("/cisco/{article}", web::get().to(routes::cisco))
-            .route(&app.css, web::get().to(routes::css))
-            .route(&app.custom_css, web::get().to(routes::custom_css))
-            .route(&app.javascript, web::get().to(routes::js))
+                .route("/linux/{article}", web::get().to(routes::linux))
+                .route("/cisco/{article}", web::get().to(routes::cisco))
+                .route(&app.css, web::get().to(routes::css))
+                .route(&app.custom_css, web::get().to(routes::custom_css))
+                .route(&app.javascript, web::get().to(routes::js))
     })
     .bind(&svr.socket)?
-    .bind_rustls(&ssl.socket, config)?
+    .bind_openssl(&ssl.socket, builder)?
     .server_hostname(&svr.hostname)
     .run()
     .await

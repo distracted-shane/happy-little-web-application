@@ -96,10 +96,6 @@ pub async fn index(tmpl: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
     let s = tmpl.render("index.html.tera", &ctx).unwrap();
     Ok(HttpResponse::Ok()
         .header("Content-Type", "text/html; charset=utf-8")
-        .header("Referrer-Policy", "same-origin")
-        .header("X-Content-Type-Options", "nosniff")
-        .header("X-Frame-Options", "SAMEORIGIN")
-        .header("X-XSS-Protection", "1; mode=block")
         .body(s))
 }
 
@@ -130,10 +126,6 @@ pub async fn cisco(tmpl: web::Data<tera::Tera>, path: web::Path<(String,)>) -> R
         let t = tmpl.render(&relative, &ctx).unwrap();
         Ok(HttpResponse::Ok()
             .header("Content-Type", "text/html; charset=utf-8")
-            .header("Referrer-Policy", "same-origin")
-            .header("X-Content-Type-Options", "nosniff")
-            .header("X-Frame-Options", "SAMEORIGIN")
-            .header("X-XSS-Protection", "1; mode=block")
             .body(t))
     }
 }
@@ -165,10 +157,6 @@ pub async fn linux(tmpl: web::Data<tera::Tera>, path: web::Path<(String,)>) -> R
         let t = tmpl.render(&relative, &ctx).unwrap();
         Ok(HttpResponse::Ok()
             .header("Content-Type", "text/html; charset=utf-8")
-            .header("Referrer-Policy", "same-origin")
-            .header("X-Content-Type-Options", "nosniff")
-            .header("X-Frame-Options", "SAMEORIGIN")
-            .header("X-XSS-Protection", "1; mode=block")
             .body(t))
     }
 }
@@ -177,10 +165,6 @@ pub async fn linux(tmpl: web::Data<tera::Tera>, path: web::Path<(String,)>) -> R
 pub async fn css() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
         .header("Content-Type", "text/css; charset=utf-8")
-        .header("Referrer-Policy", "same-origin")
-        .header("X-Content-Type-Options", "nosniff")
-        .header("X-Frame-Options", "SAMEORIGIN")
-        .header("X-XSS-Protection", "1; mode=block")
         .body(&*CSS))
 }
 
@@ -188,10 +172,6 @@ pub async fn css() -> Result<HttpResponse, Error> {
 pub async fn custom_css() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
         .header("Content-Type", "text/css; charset=utf-8")
-        .header("Referrer-Policy", "same-origin")
-        .header("X-Content-Type-Options", "nosniff")
-        .header("X-Frame-Options", "SAMEORIGIN")
-        .header("X-XSS-Protection", "1; mode=block")
         .body(&*CUSTOM_CSS))
 }
 
@@ -199,9 +179,5 @@ pub async fn custom_css() -> Result<HttpResponse, Error> {
 pub async fn js() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
         .header("Content-Type", "text/javascript; charset=utf-8")
-        .header("Referrer-Policy", "same-origin")
-        .header("X-Content-Type-Options", "nosniff")
-        .header("X-Frame-Options", "SAMEORIGIN")
-        .header("X-XSS-Protection", "1; mode=block")
         .body(&*JS))
 }

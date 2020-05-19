@@ -83,7 +83,7 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
                     ::std::process::exit(1);
                 }
             };
-            println!("{:#?}", Context::Content(Some(content_ctx.clone()))); //Eventually remove or rework w/o clone; just for testing
+            println!("Loaded content data from JSON");
             Context::Content(Some(content_ctx))
         }
 
@@ -91,12 +91,12 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
             let app_ctx: AppConf = match serde_json::from_str(&data) {
                 Ok(c) => c,
                 Err(e) => {
-                    println!("Serde deserialization error(s): {}", e); //Eventually remove or rework w/o clone; just for testing
+                    println!("Serde deserialization error(s): {}", e);
                     println!("{}", &data);
                     ::std::process::exit(1);
                 }
             };
-            println!("{:#?}", Context::App(Some(app_ctx.clone())));
+            println!("Loaded app data from JSON");
             Context::App(Some(app_ctx))
         }
 
@@ -104,12 +104,12 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
             let server_ctx: ServerConf = match serde_json::from_str(&data) {
                 Ok(c) => c,
                 Err(e) => {
-                    println!("Serde deserialization error(s): {}", e); //Eventually remove or rework w/o clone; just for testing
+                    println!("Serde deserialization error(s): {}", e);
                     println!("{}", &data);
                     ::std::process::exit(1);
                 }
             };
-            println!("{:#?}", Context::Server(Some(server_ctx.clone())));
+            println!("Loaded server data from JSON");
             Context::Server(Some(server_ctx))
         }
 
@@ -117,12 +117,12 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
             let ssl_ctx: SslConf = match serde_json::from_str(&data) {
                 Ok(c) => c,
                 Err(e) => {
-                    println!("Serde deserialization error(s): {}", e); //Eventually remove or rework w/o clone; just for testing
+                    println!("Serde deserialization error(s): {}", e);
                     println!("{}", &data);
                     ::std::process::exit(1);
                 }
             };
-            println!("{:#?}", Context::Ssl(Some(ssl_ctx.clone())));
+            println!("Loaded SSL data from JSON");
             Context::Ssl(Some(ssl_ctx))
         }
     }
