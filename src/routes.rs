@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use actix_web::{web, Error, HttpResponse};
+use actix_web::{error::ErrorInternalServerError, web, Error, HttpResponse};
 
 use super::json::{self, Context};
 
@@ -53,7 +53,6 @@ lazy_static! {
         data
     };
 
-
 // The JS framework won't be changing often and it is smol, so smol.
 // So we'll just lazy-load it statically. [Eventually we'll want to procompress this shiz]
     pub static ref JS: String = {
@@ -86,43 +85,49 @@ pub async fn index(tmpl: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
         Context::Content(Some(t)) => tera::Context::from_serialize(t).unwrap(),
         Context::Content(None) => {
             println!("Error: recieved blank context for content.");
-            ::std::process::exit(1);
+            return Err(ErrorInternalServerError("ERR-IND-BC"));
         }
         _ => {
             println!("Error: recieved incorrect context type.");
-            ::std::process::exit(1);
+            return Err(ErrorInternalServerError("ERR-IND-IC"));
         }
     };
-    let s = tmpl.render("index.html.tera", &ctx).unwrap();
-    Ok(HttpResponse::Ok()
-        .header("Content-Type", "text/html; charset=utf-8")
-        .body(s))
+    match tmpl.render("index.html.tera", &ctx) {
+        Ok(t) => Ok(HttpResponse::Ok()
+            .header("Content-Type", "text/html; charset=utf-8")
+            .body(t)),
+        Err(e) => {
+            println!("Error rendering template: {}", e);
+            Err(ErrorInternalServerError("ERR-IND-RT"))
+        }
+    }
 }
 
 // Cisco route
-pub async fn cisco(tmpl: web::Data<tera::Tera>, path: web::Path<(String,)>) -> Result<HttpResponse, Error>
-{
-    let ctx = match json::load(Context::Content(None), "/json/content.json").await {
-        Context::Content(Some(t)) => tera::Context::from_serialize(t).unwrap(),
-        Context::Content(None) => {
-            println!("Error: recieved blank context for content.");
-            ::std::process::exit(1);
-        }
-        _ => {
-            println!("Error: recieved incorrect context type.");
-            ::std::process::exit(1);
-        }
-    };
-
+pub async fn cisco(
+    tmpl: web::Data<tera::Tera>,
+    path: web::Path<(String,)>,
+) -> Result<HttpResponse, Error> {
     let base = env!("CARGO_MANIFEST_DIR").to_owned();
     let relative = format!("cisco/{}.html.tera", &path.0);
     let full = base + "/templates/" + &relative;
 
-    println!("Route::Cisco => Attempting open template: {}", full);
     if !Path::new(&full).exists() {
         println!("\tError: could not find template: {} ", full);
-        Ok(HttpResponse::Ok().body("Unable to find this page."))
+        Ok(e404().await)
     } else {
+        let ctx = match json::load(Context::Content(None), "/json/content.json").await {
+            Context::Content(Some(t)) => tera::Context::from_serialize(t).unwrap(),
+            Context::Content(None) => {
+                println!("Error: recieved blank context for content.");
+                return Err(ErrorInternalServerError("ERR-CIS-BC"));
+            }
+            _ => {
+                println!("Error: recieved incorrect context type.");
+                return Err(ErrorInternalServerError("ERR-CIS-IC"));
+            }
+        };
+
         let t = tmpl.render(&relative, &ctx).unwrap();
         Ok(HttpResponse::Ok()
             .header("Content-Type", "text/html; charset=utf-8")
@@ -131,29 +136,31 @@ pub async fn cisco(tmpl: web::Data<tera::Tera>, path: web::Path<(String,)>) -> R
 }
 
 // Linux route
-pub async fn linux(tmpl: web::Data<tera::Tera>, path: web::Path<(String,)>) -> Result<HttpResponse, Error>
-{
-    let ctx = match json::load(Context::Content(None), "/json/content.json").await {
-        Context::Content(Some(t)) => tera::Context::from_serialize(t).unwrap(),
-        Context::Content(None) => {
-            println!("Error: recieved blank context for content.");
-            ::std::process::exit(1);
-        }
-        _ => {
-            println!("Error: recieved incorrect context type.");
-            ::std::process::exit(1);
-        }
-    };
-
+pub async fn linux(
+    tmpl: web::Data<tera::Tera>,
+    path: web::Path<(String,)>,
+) -> Result<HttpResponse, Error> {
     let base = env!("CARGO_MANIFEST_DIR").to_owned();
     let relative = format!("linux/{}.html.tera", &path.0);
     let full = base + "/templates/" + &relative;
 
-    println!("Route::Linux => Attempting open template: {}", full);
+    // Drop out early (before templating) if file doesn't exist.
     if !Path::new(&full).exists() {
         println!("\tError: could not find template: {} ", full);
-        Ok(HttpResponse::Ok().body("Unable to find this page."))
+        Ok(e404().await)
     } else {
+        let ctx = match json::load(Context::Content(None), "/json/content.json").await {
+            Context::Content(Some(t)) => tera::Context::from_serialize(t).unwrap(),
+            Context::Content(None) => {
+                println!("Error: recieved blank context for content.");
+                return Err(ErrorInternalServerError("ERR-LIN-BC"));
+            }
+            _ => {
+                println!("Error: recieved incorrect context type.");
+                return Err(ErrorInternalServerError("ERR-LIN-IC"));
+            }
+        };
+
         let t = tmpl.render(&relative, &ctx).unwrap();
         Ok(HttpResponse::Ok()
             .header("Content-Type", "text/html; charset=utf-8")
@@ -180,4 +187,11 @@ pub async fn js() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok()
         .header("Content-Type", "text/javascript; charset=utf-8")
         .body(&*JS))
+}
+
+// 404 Error
+pub async fn e404() -> HttpResponse {
+    HttpResponse::NotFound()
+        .header("Content-Type", "text/plain; charset=ut8-8")
+        .body("Error - file note found")
 }

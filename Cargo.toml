@@ -11,6 +11,7 @@ actix-files = "0.2.1"
 actix-rt = "1.1.1"
 actix-web = { version = "2.0", features = ["openssl"] }
 async-std = "1.5.0"
+dialoguer = "0.6.2"
 lazy_static = "1.4.0"
 openssl = { version = "0.10.29", features = ["v110"] }
 serde = { version = "1.0.110", features = ["derive"] }

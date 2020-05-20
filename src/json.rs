@@ -55,21 +55,14 @@ pub struct SslConf {
 
 // Load a context from JSON
 pub async fn load(json_ctx: Context, path: &str) -> Context {
-    // Open file or err
-    let full_path = env!("CARGO_MANIFEST_DIR").to_owned() + path;
-    let mut f = match File::open(&full_path) {
-        Ok(t) => t,
-        Err(e) => {
-            println!("JSON file open error(s): {}\n\tPath: {}", e, full_path);
-            ::std::process::exit(1);
-        }
-    };
-
-    // Read to string or err
     let mut data = String::new();
-    if f.read_to_string(&mut data).is_err() {
-        println!("JSON file read error(s).");
-        ::std::process::exit(1);
+
+    // Open and read file or err
+    let full_path = env!("CARGO_MANIFEST_DIR").to_owned() + path;
+    if let Ok(mut file) = File::open(&full_path) {
+        if file.read_to_string(&mut data).is_err() {
+            println!("JSON file read error(s).");
+        }
     }
 
     // Load the context to the correct struct. Enums. Enums!!!
@@ -80,10 +73,9 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
                 Err(e) => {
                     println!("Serde deserialization error(s): {}", e);
                     println!("{}", &data);
-                    ::std::process::exit(1);
+                    return Context::Content(None);
                 }
             };
-            println!("Loaded content data from JSON");
             Context::Content(Some(content_ctx))
         }
 
@@ -93,10 +85,9 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
                 Err(e) => {
                     println!("Serde deserialization error(s): {}", e);
                     println!("{}", &data);
-                    ::std::process::exit(1);
+                    return Context::App(None);
                 }
             };
-            println!("Loaded app data from JSON");
             Context::App(Some(app_ctx))
         }
 
@@ -106,10 +97,9 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
                 Err(e) => {
                     println!("Serde deserialization error(s): {}", e);
                     println!("{}", &data);
-                    ::std::process::exit(1);
+                    return Context::Server(None);
                 }
             };
-            println!("Loaded server data from JSON");
             Context::Server(Some(server_ctx))
         }
 
@@ -119,10 +109,9 @@ pub async fn load(json_ctx: Context, path: &str) -> Context {
                 Err(e) => {
                     println!("Serde deserialization error(s): {}", e);
                     println!("{}", &data);
-                    ::std::process::exit(1);
+                    return Context::Ssl(None);
                 }
             };
-            println!("Loaded SSL data from JSON");
             Context::Ssl(Some(ssl_ctx))
         }
     }
