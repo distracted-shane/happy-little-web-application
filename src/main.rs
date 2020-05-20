@@ -68,9 +68,10 @@ async fn main() {
         let svr = server_conf("/json/server.json").await;
         let ssl = ssl_conf("/json/ssl.json").await;
         let (tx, rx) = mpsc::channel();
+        let (ssl_tx, ssl_rx) = mpsc::channel();
 
-        // SSL builder
-        let builder = {
+        // SSL builder thread (send conf data to server thread when done)
+        let builder =  thread::spawn(move || {
             let cert_path = env!("CARGO_MANIFEST_DIR").to_owned() + &ssl.certfile;
             let key_path = env!("CARGO_MANIFEST_DIR").to_owned() + &ssl.keyfile;
             let mut builder = SslAcceptor::mozilla_modern_v5(SslMethod::tls()).unwrap();
@@ -78,12 +79,14 @@ async fn main() {
                 .set_private_key_file(key_path, SslFiletype::PEM)
                 .unwrap();
             builder.set_certificate_chain_file(cert_path).unwrap();
+            let _ = ssl_tx.send(ssl);
             builder
-        };
+        });
 
         // Server gets a thread
-        thread::spawn(move || {
+        thread::spawn( move || {
             let sys = System::new("http-server");
+            let ssl = ssl_rx.recv().unwrap();
             let srv = HttpServer::new(|| {
                 let app = task::block_on(app_conf("/json/app.json"));
 
@@ -119,7 +122,7 @@ async fn main() {
             })
             .bind(&svr.socket)
             .unwrap()
-            .bind_openssl(&ssl.socket, builder)
+            .bind_openssl(&ssl.socket, builder.join().unwrap())
             .unwrap()
             .run();
             let _ = tx.send(srv);
@@ -127,6 +130,9 @@ async fn main() {
         });
 
         let srv = rx.recv().unwrap();
+
+        // We use srv to interact with the server
+        // Everything below is menu stuff
 
         let selections = &["Pause", "Resume", "Reload", "Quit"];
 
