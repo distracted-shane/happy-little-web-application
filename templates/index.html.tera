@@ -2,6 +2,9 @@
 {% block title %}Welcome to tachyon.cx{% endblock title %}
 {% block body %}
 <main class="wrapper">
+<div class="hero">
+<h1>Here</h1>
+</div>
     <h2>Welcome!</h2>
 </main>
 {% endblock body %}
